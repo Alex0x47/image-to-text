@@ -4,30 +4,30 @@ import android.graphics.Bitmap
 import android.util.NoSuchPropertyException
 import com.getcapacitor.JSObject
 import com.getcapacitor.PluginCall
-import com.google.firebase.ml.vision.FirebaseVision
-import com.google.firebase.ml.vision.common.FirebaseVisionImage
-import com.google.firebase.ml.vision.text.FirebaseVisionTextRecognizer
+import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.text.TextRecognition
+import com.google.mlkit.vision.text.japanese.JapaneseTextRecognizerOptions
 import org.json.JSONArray
 
 
 class TextDetector {
   fun detectText(call: PluginCall, bitmap: Bitmap) {
-    val image: FirebaseVisionImage
     val detectedText = ArrayList<Any>()
 
     try {
-      image = FirebaseVisionImage.fromBitmap(bitmap)
+      val image = InputImage.fromBitmap(bitmap, 0)
       val width = bitmap.width
       val height = bitmap.height
 
-      val textDetector: FirebaseVisionTextRecognizer = FirebaseVision.getInstance().getOnDeviceTextRecognizer();
+      // Use Japanese text recognizer (also handles Latin, Cyrillic, etc.)
+      val recognizer = TextRecognition.getClient(JapaneseTextRecognizerOptions.Builder().build())
 
-      textDetector.processImage(image)
-        .addOnSuccessListener { detectedBlocks ->
-          for (block in detectedBlocks.textBlocks) {
+      recognizer.process(image)
+        .addOnSuccessListener { result ->
+          for (block in result.textBlocks) {
             for (line in block.lines) {
               // Gets the four corner points in clockwise direction starting with top-left.
-              val cornerPoints = line.cornerPoints ?: throw NoSuchPropertyException("FirebaseVisionTextRecognizer.processImage: could not get bounding coordinates")
+              val cornerPoints = line.cornerPoints ?: throw NoSuchPropertyException("TextRecognizer.process: could not get bounding coordinates")
               val topLeft = cornerPoints[0]
               val topRight = cornerPoints[1]
               val bottomRight = cornerPoints[2]
@@ -47,10 +47,10 @@ class TextDetector {
           call.resolve(JSObject().put("textDetections", JSONArray(detectedText)))
         }
         .addOnFailureListener { e ->
-          call.reject("FirebaseVisionTextRecognizer couldn't process the given image", e)
+          call.reject("TextRecognizer couldn't process the given image", e)
         }
     } catch (e: Exception) {
-      e.printStackTrace();
+      e.printStackTrace()
       call.reject(e.localizedMessage, e)
     }
   }
