@@ -85,9 +85,19 @@ public class TextDetector {
     }
 
     lazy var textDetectionRequest: VNRecognizeTextRequest = {
-        // Specifying the image analysis request to perform - text detection here
-        let textDetectRequest = VNRecognizeTextRequest(completionHandler: handleDetectedText)
-        return textDetectRequest
+      let textDetectRequest = VNRecognizeTextRequest(completionHandler: handleDetectedText)
+      // Use accurate recognition level (required for CJK scripts like Japanese)
+      textDetectRequest.recognitionLevel = .accurate
+      // All supported recognition languages (Japanese first for CJK priority)
+      textDetectRequest.recognitionLanguages = [
+          "ja-JP", "en-US", "fr-FR", "de-DE", "es-ES",
+          "it-IT", "pt-BR", "ru-RU", "uk-UA", "th-TH", "id-ID"
+      ]
+      // Enable automatic language detection (iOS 16+)
+      if #available(iOS 16.0, *) {
+          textDetectRequest.automaticallyDetectsLanguage = true
+      }
+      return textDetectRequest
     }()
 
     func handleDetectedText(request: VNRequest?, error: Error?) {
